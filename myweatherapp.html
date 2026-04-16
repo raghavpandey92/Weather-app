@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sky: #0f1b2d;
+      --sky2: #162236;
+      --card: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.1);
+      --accent: #5eb8ff;
+      --accent2: #a78bfa;
+      --text: #e8f4ff;
+      --muted: rgba(232,244,255,0.5);
+      --radius: 20px;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--sky);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    /* Animated background blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #3b82f6, transparent);
+      top: -100px; left: -100px;
+      animation: blob1 10s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #8b5cf6, transparent);
+      bottom: -80px; right: -80px;
+      animation: blob2 12s ease-in-out infinite alternate;
+    }
+    @keyframes blob1 { to { transform: translate(60px, 80px); } }
+    @keyframes blob2 { to { transform: translate(-50px, -60px); } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    /* Header */
+    .app-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3rem;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+    .app-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 300;
+      margin-bottom: 2rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Search */
+    .search-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 2rem;
+    }
+    .search-wrap input {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 18px;
+      height: 52px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      backdrop-filter: blur(10px);
+    }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap button {
+      height: 52px;
+      padding: 0 24px;
+      background: var(--accent);
+      color: #0f1b2d;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .search-wrap button:hover { opacity: 0.9; transform: translateY(-1px); }
+    .search-wrap button:active { transform: scale(0.97); }
+
+    /* Error */
+    .error-msg {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 0.88rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    /* Main weather card */
+    .weather-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      padding: 2rem;
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .location-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      line-height: 1;
+    }
+    .location-country {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 300;
+      margin-top: 3px;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Temp hero */
+    .temp-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .temp-main {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 7rem;
+      line-height: 1;
+      color: var(--text);
+    }
+    .temp-main span { font-size: 3rem; color: var(--accent); }
+    .condition-icon { font-size: 5rem; line-height: 1; }
+    .condition-text {
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 300;
+      margin-bottom: 0.4rem;
+    }
+    .feels-like {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .feels-like strong { color: var(--accent); font-weight: 500; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-unit {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 300;
+      margin-top: 2px;
+    }
+
+    /* AQI bar */
+    .aqi-wrap {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .aqi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .aqi-label { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+    .aqi-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.04em;
+    }
+    .aqi-track {
+      height: 6px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+    .aqi-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    /* Loading spinner */
+    .loading {
+      text-align: center;
+      padding: 2rem 0;
+      display: none;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.8rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { font-size: 0.85rem; color: var(--muted); font-weight: 300; }
+
+    /* Hint */
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 300;
+      padding: 2.5rem 0;
+    }
+    .hint .big-icon { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-title">Skycaster</div>
+    <div class="app-sub">Real-time weather for any city on Earth</div>
+
+    <div class="search-wrap">
+      <input type="text" id="cityInput" placeholder="Enter city — e.g. Mumbai, Paris…" autocomplete="off" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Fetching weather data…</p>
+    </div>
+
+    <div class="hint" id="hint">
+      <span class="big-icon">🌍</span>
+      Type a city name above and hit Search
+    </div>
+
+    <div class="weather-card" id="weatherCard">
+      <div class="location-name" id="locName"></div>
+      <div class="location-country" id="locCountry"></div>
+
+      <div class="temp-hero">
+        <div>
+          <div class="temp-main" id="tempMain"></div>
+        </div>
+        <div class="condition-icon" id="condIcon"></div>
+      </div>
+      <div class="condition-text" id="condText"></div>
+      <div class="feels-like" id="feelsLike"></div>
+
+      <div class="divider"></div>
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Humidity</div>
+          <div class="stat-value" id="humidity"></div>
+          <div class="stat-unit">percent</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Wind Speed</div>
+          <div class="stat-value" id="wind"></div>
+          <div class="stat-unit" id="windDir"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Visibility</div>
+          <div class="stat-value" id="vis"></div>
+          <div class="stat-unit">kilometres</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">UV Index</div>
+          <div class="stat-value" id="uv"></div>
+          <div class="stat-unit" id="uvLabel"></div>
+        </div>
+      </div>
+
+      <div class="aqi-wrap" id="aqiWrap" style="display:none">
+        <div class="aqi-top">
+          <div class="aqi-label">Air Quality (US EPA)</div>
+          <div class="aqi-badge" id="aqiBadge"></div>
+        </div>
+        <div class="aqi-track"><div class="aqi-fill" id="aqiFill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = 'e7bdab08fa814f89bab95713261504';
+
+    const $ = id => document.getElementById(id);
+
+    function conditionEmoji(code, isDay) {
+      if (code === 1000) return isDay ? '☀️' : '🌙';
+      if (code === 1003) return '⛅';
+      if ([1006,1009].includes(code)) return '☁️';
+      if ([1030,1135,1147].includes(code)) return '🌫️';
+      if ([1063,1180,1183,1186,1189,1192,1195,1240,1243,1246].includes(code)) return '🌧️';
+      if ([1066,1114,1117,1210,1213,1216,1219,1222,1225,1255,1258].includes(code)) return '❄️';
+      if ([1087,1273,1276,1279,1282].includes(code)) return '⛈️';
+      if ([1069,1072,1204,1207,1249,1252].includes(code)) return '🌨️';
+      return '🌡️';
+    }
+
+    function windDirection(deg) {
+      const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+      return dirs[Math.round(deg / 45) % 8];
+    }
+
+    function uvText(uv) {
+      if (uv <= 2) return 'Low';
+      if (uv <= 5) return 'Moderate';
+      if (uv <= 7) return 'High';
+      if (uv <= 10) return 'Very High';
+      return 'Extreme';
+    }
+
+    const AQI_INFO = [
+      null,
+      { label:'Good',                  bg:'#16a34a', text:'#dcfce7', pct: 10 },
+      { label:'Moderate',              bg:'#ca8a04', text:'#fef9c3', pct: 28 },
+      { label:'Unhealthy for some',    bg:'#ea580c', text:'#ffedd5', pct: 46 },
+      { label:'Unhealthy',             bg:'#dc2626', text:'#fee2e2', pct: 64 },
+      { label:'Very Unhealthy',        bg:'#9333ea', text:'#f3e8ff', pct: 82 },
+      { label:'Hazardous',             bg:'#7f1d1d', text:'#fecaca', pct:100 },
+    ];
+
+    function show(id) { $(id).style.display = ''; }
+    function hide(id) { $(id).style.display = 'none'; }
+
+    async function getWeather(city) {
+      hide('hint');
+      hide('weatherCard');
+      hide('errorMsg');
+      show('loading');
+
+      try {
+        const res = await fetch(
+          `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${encodeURIComponent(city)}&aqi=yes`
+        );
+        const data = await res.json();
+        hide('loading');
+
+        if (!res.ok) {
+          $('errorMsg').textContent = data.error?.message || 'City not found. Try a different name.';
+          $('errorMsg').style.display = 'block';
+          return;
+        }
+
+        renderWeather(data);
+      } catch (e) {
+        hide('loading');
+        $('errorMsg').textContent = 'Network error. Please check your internet connection.';
+        $('errorMsg').style.display = 'block';
+      }
+    }
+
+    function renderWeather(d) {
+      const c = d.current, loc = d.location;
+
+      $('locName').textContent = loc.name;
+      $('locCountry').textContent = [loc.region, loc.country].filter(Boolean).join(' · ');
+
+      $('tempMain').innerHTML = `${Math.round(c.temp_c)}<span>°C</span>`;
+      $('condIcon').textContent = conditionEmoji(c.condition.code, c.is_day);
+      $('condText').textContent = c.condition.text;
+      $('feelsLike').innerHTML = `Feels like <strong>${Math.round(c.feelslike_c)}°C</strong> &nbsp;·&nbsp; ${Math.round(c.temp_f)}°F`;
+
+      $('humidity').textContent = c.humidity + '%';
+      $('wind').textContent = Math.round(c.wind_kph) + ' km/h';
+      $('windDir').textContent = windDirection(c.wind_degree) + ' direction';
+      $('vis').textContent = c.vis_km;
+      $('uv').textContent = c.uv;
+      $('uvLabel').textContent = uvText(c.uv);
+
+      const aqiIdx = c.air_quality?.['us-epa-index'];
+      if (aqiIdx && AQI_INFO[aqiIdx]) {
+        const info = AQI_INFO[aqiIdx];
+        $('aqiBadge').textContent = info.label;
+        $('aqiBadge').style.background = info.bg;
+        $('aqiBadge').style.color = info.text;
+        $('aqiFill').style.width = info.pct + '%';
+        $('aqiFill').style.background = info.bg;
+        $('aqiWrap').style.display = '';
+      } else {
+        hide('aqiWrap');
+      }
+
+      $('weatherCard').style.display = 'block';
+    }
+
+    $('searchBtn').addEventListener('click', () => {
+      const city = $('cityInput').value.trim();
+      if (city) getWeather(city);
+    });
+
+    $('cityInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const city = $('cityInput').value.trim();
+        if (city) getWeather(city);
+      }
+    });
+  </script>
+</body>
+</html>
